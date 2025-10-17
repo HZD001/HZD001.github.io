@@ -140,6 +140,10 @@ const Timer = {
     this.lunchEndTime = null;
     this.totalWorkSeconds = 0;
 
+    this.config.startWorkTime = "";
+    Config.saveConfig(this.config);
+    document.getElementById("startWorkTime").value = "";
+
     Config.clearTimerState();
     NotificationManager.reset();
 
