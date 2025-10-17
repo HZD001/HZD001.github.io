@@ -153,14 +153,19 @@ const Timer = {
   },
 
   calculateTimes() {
-    const startWorkTimeConfig = Utils.parseTimeString(
-      this.config.startWorkTime
-    );
-    this.startTime = Utils.setTimeToDate(
-      new Date(),
-      startWorkTimeConfig.hours,
-      startWorkTimeConfig.minutes
-    );
+    const now = new Date();
+    const startWorkTimeConfig = this.config.startWorkTime;
+    
+    if (startWorkTimeConfig && startWorkTimeConfig.trim() !== "") {
+      const parsedTime = Utils.parseTimeString(startWorkTimeConfig);
+      this.startTime = Utils.setTimeToDate(
+        now,
+        parsedTime.hours,
+        parsedTime.minutes
+      );
+    } else {
+      this.startTime = new Date(now);
+    }
 
     const lunchTimeConfig = Utils.parseTimeString(this.config.lunchTime);
     this.lunchStartTime = Utils.setTimeToDate(
@@ -278,14 +283,31 @@ const Timer = {
   },
 
   saveSettings() {
-    this.config = Config.getConfigFromUI();
+    const newConfig = Config.getConfigFromUI();
+    const startWorkTimeChanged = this.config.startWorkTime !== newConfig.startWorkTime;
+    
+    this.config = newConfig;
     Config.saveConfig(this.config);
     NotificationManager.config = this.config;
     this.closeSettings();
 
-    if (this.isRunning) {
+    if (this.isRunning && startWorkTimeChanged) {
+      const confirmRecalculate = confirm(
+        "上班时间已修改，是否重新计算倒计时？\n\n点击“确定”将根据新设置重新计算开始时间和结束时间"
+      );
+      
+      if (confirmRecalculate) {
+        this.recalculateTimes();
+      }
+    } else if (this.isRunning) {
       alert("设置已保存，将在下次开始计时时生效");
     }
+  },
+
+  recalculateTimes() {
+    this.calculateTimes();
+    this.saveState();
+    this.updateDisplay();
   },
 
   testLunchNotification() {

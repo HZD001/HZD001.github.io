@@ -3,7 +3,7 @@ const Config = {
   TIMER_STATE_KEY: "countdown_timer_state",
 
   defaultConfig: {
-    startWorkTime: "09:00",
+    startWorkTime: "",
     workHours: 8,
     lunchBreak: 60,
     lunchTime: "12:00",
