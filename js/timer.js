@@ -69,6 +69,14 @@ const Timer = {
     document
       .getElementById("checkPermissionBtn")
       .addEventListener("click", () => this.checkNotificationPermission());
+    
+    document
+      .getElementById("soundType")
+      .addEventListener("change", (e) => this.handleSoundTypeChange(e));
+    
+    document
+      .getElementById("customSound")
+      .addEventListener("change", (e) => this.handleCustomSoundUpload(e));
   },
 
   loadSavedState() {
@@ -355,6 +363,46 @@ const Timer = {
 
     statusDiv.innerHTML = html;
     statusDiv.style.display = "block";
+  },
+
+  handleSoundTypeChange(e) {
+    const customSoundGroup = document.getElementById("customSoundGroup");
+    if (e.target.value === "custom") {
+      customSoundGroup.style.display = "block";
+    } else {
+      customSoundGroup.style.display = "none";
+    }
+  },
+
+  handleCustomSoundUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("audio/")) {
+      alert("请选择音频文件！");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("文件大小不能超过5MB！");
+      e.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const base64Data = event.target.result;
+      Config.saveCustomSound(base64Data);
+      const preview = document.getElementById("customSoundPreview");
+      preview.textContent = `✓ 已选择：${file.name}`;
+      preview.style.color = "#667eea";
+    };
+    reader.onerror = () => {
+      alert("文件读取失败，请重试！");
+      e.target.value = "";
+    };
+    reader.readAsDataURL(file);
   },
 };
 

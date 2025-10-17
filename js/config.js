@@ -11,6 +11,8 @@ const Config = {
     enableOffWorkNotify: true,
     notifyMethod: "all",
     enableVoice: false,
+    soundType: "beep",
+    customSoundUrl: null,
   },
 
   loadConfig() {
@@ -62,6 +64,18 @@ const Config = {
       config.notifyMethod || "all";
     document.getElementById("enableVoice").checked =
       config.enableVoice || false;
+    document.getElementById("soundType").value = config.soundType || "beep";
+    
+    const customSoundGroup = document.getElementById("customSoundGroup");
+    const customSoundPreview = document.getElementById("customSoundPreview");
+    if (config.soundType === "custom") {
+      customSoundGroup.style.display = "block";
+      if (config.customSoundUrl) {
+        customSoundPreview.textContent = "✓ 已选择自定义音频";
+      }
+    } else {
+      customSoundGroup.style.display = "none";
+    }
   },
 
   getConfigFromUI() {
@@ -75,6 +89,14 @@ const Config = {
         document.getElementById("enableOffWorkNotify").checked,
       notifyMethod: document.getElementById("notifyMethod").value,
       enableVoice: document.getElementById("enableVoice").checked,
+      soundType: document.getElementById("soundType").value,
+      customSoundUrl: this.loadConfig().customSoundUrl,
     };
+  },
+
+  saveCustomSound(base64Data) {
+    const config = this.loadConfig();
+    config.customSoundUrl = base64Data;
+    this.saveConfig(config);
   },
 };

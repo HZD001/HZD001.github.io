@@ -3,6 +3,7 @@ const NotificationManager = {
   lunchNotified: false,
   offWorkNotified: false,
   config: null,
+  audioCache: {},
 
   async init(config) {
     this.config = config;
@@ -73,6 +74,28 @@ const NotificationManager = {
   },
 
   playSound() {
+    const soundType = this.config?.soundType || "beep";
+
+    if (soundType === "custom" && this.config?.customSoundUrl) {
+      this.playCustomSound(this.config.customSoundUrl);
+      return;
+    }
+
+    this.playBuiltInSound(soundType);
+  },
+
+  playCustomSound(base64Data) {
+    try {
+      const audio = new Audio(base64Data);
+      audio.volume = 0.5;
+      audio.play().catch((e) => console.error("播放自定义音频失败:", e));
+    } catch (e) {
+      console.error("加载自定义音频失败:", e);
+      this.playBuiltInSound("beep");
+    }
+  },
+
+  playBuiltInSound(type) {
     try {
       const audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
@@ -82,25 +105,72 @@ const NotificationManager = {
       oscillator.connect(gainNode);
       gainNode.connect(audioContext.destination);
 
-      oscillator.frequency.value = 800;
-      oscillator.type = "sine";
+      const soundConfig = this.getSoundConfig(type);
+      oscillator.frequency.value = soundConfig.frequency;
+      oscillator.type = soundConfig.waveType;
 
       gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
       gainNode.gain.exponentialRampToValueAtTime(
         0.01,
-        audioContext.currentTime + 0.5
+        audioContext.currentTime + soundConfig.duration
       );
 
       oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
+      oscillator.stop(audioContext.currentTime + soundConfig.duration);
 
-      setTimeout(() => {
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-      }, 300);
+      if (soundConfig.repeat) {
+        setTimeout(() => {
+          const osc2 = audioContext.createOscillator();
+          const gain2 = audioContext.createGain();
+          osc2.connect(gain2);
+          gain2.connect(audioContext.destination);
+          osc2.frequency.value = soundConfig.frequency;
+          osc2.type = soundConfig.waveType;
+          gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gain2.gain.exponentialRampToValueAtTime(
+            0.01,
+            audioContext.currentTime + soundConfig.duration
+          );
+          osc2.start(audioContext.currentTime);
+          osc2.stop(audioContext.currentTime + soundConfig.duration);
+        }, soundConfig.delay || 300);
+      }
     } catch (e) {
       console.error("播放声音失败:", e);
     }
+  },
+
+  getSoundConfig(type) {
+    const configs = {
+      beep: {
+        frequency: 800,
+        waveType: "sine",
+        duration: 0.5,
+        repeat: true,
+        delay: 300,
+      },
+      bell: {
+        frequency: 1000,
+        waveType: "triangle",
+        duration: 0.8,
+        repeat: false,
+      },
+      chime: {
+        frequency: 1200,
+        waveType: "sine",
+        duration: 0.6,
+        repeat: true,
+        delay: 400,
+      },
+      ding: {
+        frequency: 1500,
+        waveType: "square",
+        duration: 0.3,
+        repeat: true,
+        delay: 200,
+      },
+    };
+    return configs[type] || configs.beep;
   },
 
   flashPage() {

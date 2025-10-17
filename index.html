@@ -115,6 +115,23 @@
             </label>
           </div>
 
+          <div class="form-group">
+            <label for="soundType">提示音类型</label>
+            <select id="soundType">
+              <option value="beep">默认提示音</option>
+              <option value="bell">铃声</option>
+              <option value="chime">钟声</option>
+              <option value="ding">叮咚</option>
+              <option value="custom">自定义音频</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="customSoundGroup" style="display: none;">
+            <label for="customSound">自定义音频文件 (MP3/WAV)</label>
+            <input type="file" id="customSound" accept="audio/mp3,audio/wav,audio/ogg" />
+            <div id="customSoundPreview" style="margin-top: 10px; color: #666; font-size: 14px;"></div>
+          </div>
+
           <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
             <label style="margin-bottom: 15px;">测试提醒功能</label>
             <div style="display: flex; gap: 10px;">
