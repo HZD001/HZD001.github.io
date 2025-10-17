@@ -189,9 +189,7 @@ const Timer = {
     this.totalWorkSeconds = this.config.workHours * 3600;
 
     this.endTime = new Date(
-      this.startTime.getTime() +
-        this.totalWorkSeconds * 1000 +
-        this.config.lunchBreak * 60000
+      this.startTime.getTime() + this.totalWorkSeconds * 1000
     );
 
     this.elements.startTimeDisplay.textContent =
@@ -232,7 +230,7 @@ const Timer = {
     const elapsedSeconds = Utils.getSecondsDiff(now, this.startTime);
     const progress = Utils.calculateProgress(
       elapsedSeconds,
-      this.totalWorkSeconds + this.config.lunchBreak * 60
+      this.totalWorkSeconds
     );
     this.elements.progressFill.style.width = `${progress}%`;
   },
