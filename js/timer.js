@@ -186,7 +186,7 @@ const Timer = {
       this.lunchStartTime.getTime() + this.config.lunchBreak * 60000
     );
 
-    this.totalWorkSeconds = this.config.workHours * 60;
+    this.totalWorkSeconds = this.config.workHours * 3600;
 
     this.endTime = new Date(
       this.startTime.getTime() + this.totalWorkSeconds * 1000
