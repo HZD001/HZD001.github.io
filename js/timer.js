@@ -80,6 +80,11 @@ const Timer = {
       this.lunchEndTime = new Date(savedState.lunchEndTime);
       this.totalWorkSeconds = savedState.totalWorkSeconds;
 
+      this.elements.startTimeDisplay.textContent =
+        Utils.formatTimeHHMM(this.startTime);
+      this.elements.endTimeDisplay.textContent =
+        Utils.formatTimeHHMM(this.endTime);
+
       const now = new Date();
       if (now < this.endTime) {
         this.start(true);
