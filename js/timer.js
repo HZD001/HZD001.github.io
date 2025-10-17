@@ -186,7 +186,7 @@ const Timer = {
       this.lunchStartTime.getTime() + this.config.lunchBreak * 60000
     );
 
-    this.totalWorkSeconds = this.config.workHours * 3600;
+    this.totalWorkSeconds = this.config.workHours * 60;
 
     this.endTime = new Date(
       this.startTime.getTime() + this.totalWorkSeconds * 1000
@@ -256,8 +256,18 @@ const Timer = {
     this.elements.status.textContent = "下班啦！辛苦了！";
     this.elements.progressFill.style.width = "100%";
     this.pause();
-    this.elements.startBtn.textContent = "已完成";
-    this.elements.startBtn.disabled = true;
+    
+    this.startTime = null;
+    this.endTime = null;
+    this.lunchStartTime = null;
+    this.lunchEndTime = null;
+    this.totalWorkSeconds = 0;
+    
+    Config.clearTimerState();
+    NotificationManager.reset();
+    
+    this.elements.startBtn.textContent = "开始上班";
+    this.elements.startBtn.disabled = false;
 
     if (this.config.enableOffWorkNotify) {
       NotificationManager.notifyOffWork();
