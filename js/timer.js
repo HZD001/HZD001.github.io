@@ -1,3 +1,7 @@
+/**
+ * 定时器核心模块
+ * 负责管理工作时间倒计时、午休和定时休息功能
+ */
 const Timer = {
   config: null,
   startTime: null,
@@ -7,6 +11,15 @@ const Timer = {
   totalWorkSeconds: 0,
   interval: null,
   isRunning: false,
+  lastBreakTime: null,
+  isOnBreak: false,
+  breakInterval: null,
+  breakRemainingSeconds: 0,
+  breakModalTimeout: null,
+  breakStartTime: null,
+  breakModalShown: false,
+  skipBreakCountdown: 15,
+  skipBreakInterval: null,
 
   elements: {
     timerDisplay: null,
@@ -21,8 +34,15 @@ const Timer = {
     closeBtn: null,
     cancelBtn: null,
     saveBtn: null,
+    breakModal: null,
+    breakTimer: null,
+    skipBreakBtn: null,
+    startBreakBtn: null,
   },
 
+  /**
+   * 初始化定时器
+   */
   init() {
     this.config = Config.loadConfig();
     this.cacheElements();
@@ -32,6 +52,9 @@ const Timer = {
     NotificationManager.init(this.config);
   },
 
+  /**
+   * 缓存 DOM 元素引用
+   */
   cacheElements() {
     this.elements.timerDisplay = document.querySelector(".timer-display .time");
     this.elements.status = document.getElementById("status");
@@ -45,8 +68,15 @@ const Timer = {
     this.elements.closeBtn = document.getElementById("closeBtn");
     this.elements.cancelBtn = document.getElementById("cancelBtn");
     this.elements.saveBtn = document.getElementById("saveBtn");
+    this.elements.breakModal = document.getElementById("breakModal");
+    this.elements.breakTimer = document.getElementById("breakTimer");
+    this.elements.skipBreakBtn = document.getElementById("skipBreakBtn");
+    this.elements.startBreakBtn = document.getElementById("startBreakBtn");
   },
 
+  /**
+   * 绑定事件监听
+   */
   bindEvents() {
     this.elements.startBtn.addEventListener("click", () => this.toggleTimer());
     this.elements.resetBtn.addEventListener("click", () => this.reset());
@@ -67,6 +97,9 @@ const Timer = {
       .getElementById("testOffWorkBtn")
       .addEventListener("click", () => this.testOffWorkNotification());
     document
+      .getElementById("testBreakBtn")
+      .addEventListener("click", () => this.testBreakNotification());
+    document
       .getElementById("checkPermissionBtn")
       .addEventListener("click", () => this.checkNotificationPermission());
     
@@ -77,8 +110,14 @@ const Timer = {
     document
       .getElementById("customSound")
       .addEventListener("change", (e) => this.handleCustomSoundUpload(e));
+    
+    this.elements.skipBreakBtn.addEventListener("click", () => this.skipBreak());
+    this.elements.startBreakBtn.addEventListener("click", () => this.startBreak());
   },
 
+  /**
+   * 加载保存的计时状态
+   */
   loadSavedState() {
     const savedState = Config.loadTimerState();
     if (savedState) {
@@ -102,6 +141,9 @@ const Timer = {
     }
   },
 
+  /**
+   * 切换计时器状态(开始/暂停)
+   */
   toggleTimer() {
     if (this.isRunning) {
       this.pause();
@@ -110,6 +152,10 @@ const Timer = {
     }
   },
 
+  /**
+   * 开始计时
+   * @param {boolean} isResuming - 是否是恢复计时
+   */
   start(isResuming = false) {
     if (!isResuming) {
       this.calculateTimes();
@@ -124,21 +170,48 @@ const Timer = {
     this.interval = setInterval(() => this.tick(), 1000);
   },
 
+  /**
+   * 暂停计时
+   */
   pause() {
     this.isRunning = false;
     this.elements.startBtn.textContent = "继续";
     clearInterval(this.interval);
   },
 
+  /**
+   * 重置计时器
+   */
   reset() {
     this.isRunning = false;
     clearInterval(this.interval);
+    
+    if (this.breakInterval) {
+      clearInterval(this.breakInterval);
+      this.breakInterval = null;
+    }
+    
+    if (this.breakModalTimeout) {
+      clearTimeout(this.breakModalTimeout);
+      this.breakModalTimeout = null;
+    }
+    
+    if (this.skipBreakInterval) {
+      clearInterval(this.skipBreakInterval);
+      this.skipBreakInterval = null;
+    }
+    
+    this.isOnBreak = false;
+    this.breakModalShown = false;
+    this.elements.breakModal.classList.remove("active");
+    this.elements.skipBreakBtn.textContent = "跳过休息";
 
     this.startTime = null;
     this.endTime = null;
     this.lunchStartTime = null;
     this.lunchEndTime = null;
     this.totalWorkSeconds = 0;
+    this.lastBreakTime = null;
 
     this.config.startWorkTime = "";
     Config.saveConfig(this.config);
@@ -156,6 +229,9 @@ const Timer = {
     this.elements.endTimeDisplay.textContent = "--:--";
   },
 
+  /**
+   * 计算开始时间、结束时间、午休时间
+   */
   calculateTimes() {
     const now = new Date();
     const startWorkTimeConfig = this.config.startWorkTime;
@@ -189,7 +265,7 @@ const Timer = {
     this.totalWorkSeconds = this.config.workHours * 3600;
 
     this.endTime = new Date(
-      this.startTime.getTime() + this.totalWorkSeconds * 1000
+      this.startTime.getTime() + this.totalWorkSeconds * 1000 + this.config.lunchBreak * 60000
     );
 
     this.elements.startTimeDisplay.textContent =
@@ -198,11 +274,19 @@ const Timer = {
       Utils.formatTimeHHMM(this.endTime);
   },
 
+  /**
+   * 每秒执行的刷新
+   */
   tick() {
-    this.updateDisplay();
-    this.checkNotificationManagers();
+    if (!this.isOnBreak) {
+      this.updateDisplay();
+      this.checkNotificationManagers();
+    }
   },
 
+  /**
+   * 更新显示界面
+   */
   updateDisplay() {
     const now = new Date();
 
@@ -221,7 +305,9 @@ const Timer = {
       this.config.lunchBreak
     );
 
-    if (isInLunch) {
+    if (this.isOnBreak) {
+      this.elements.status.textContent = "休息中，放松一下~";
+    } else if (isInLunch) {
       this.elements.status.textContent = "午休时间，好好休息~";
     } else {
       this.elements.status.textContent = "正在努力工作中...";
@@ -235,6 +321,9 @@ const Timer = {
     this.elements.progressFill.style.width = `${progress}%`;
   },
 
+  /**
+   * 检查并触发各种提醒(午休/下班/定时休息)
+   */
   checkNotificationManagers() {
     const now = new Date();
 
@@ -249,8 +338,147 @@ const Timer = {
     if (this.config.enableOffWorkNotify && now >= this.endTime) {
       NotificationManager.notifyOffWork();
     }
+
+    if (this.config.enableBreakReminder && this.isRunning) {
+      this.checkBreakReminder(now);
+    }
   },
 
+  /**
+   * 检查定时休息提醒
+   * @param {Date} now - 当前时间
+   */
+  checkBreakReminder(now) {
+    if (!this.lastBreakTime) {
+      this.lastBreakTime = new Date();
+    }
+
+    if (now >= this.endTime) {
+      return;
+    }
+
+    const isInLunch = Utils.isInLunchBreak(
+      now,
+      this.lunchStartTime,
+      this.config.lunchBreak
+    );
+
+    if (isInLunch) {
+      return;
+    }
+
+    const minutesSinceLastBreak = Math.floor(
+      (now - this.lastBreakTime) / 60000
+    );
+
+    if (minutesSinceLastBreak >= this.config.breakInterval && !this.breakModalShown) {
+      this.showBreakModal();
+    }
+  },
+
+  /**
+   * 显示休息提醒模态框
+   */
+  showBreakModal() {
+    this.breakRemainingSeconds = this.config.breakDuration * 60;
+    this.elements.breakTimer.textContent = Utils.formatTime(this.breakRemainingSeconds);
+    this.elements.breakModal.classList.add("active");
+    this.breakModalShown = true;
+    
+    NotificationManager.notifyBreak();
+    
+    this.skipBreakCountdown = 15;
+    this.elements.skipBreakBtn.textContent = `跳过休息 (${this.skipBreakCountdown}s)`;
+    
+    this.skipBreakInterval = setInterval(() => {
+      this.skipBreakCountdown--;
+      if (this.skipBreakCountdown > 0) {
+        this.elements.skipBreakBtn.textContent = `跳过休息 (${this.skipBreakCountdown}s)`;
+      } else {
+        this.skipBreak();
+      }
+    }, 1000);
+    
+    this.breakModalTimeout = setTimeout(() => {
+      this.skipBreak();
+    }, 15000);
+  },
+
+  /**
+   * 跳过休息
+   */
+  skipBreak() {
+    if (this.breakModalTimeout) {
+      clearTimeout(this.breakModalTimeout);
+      this.breakModalTimeout = null;
+    }
+    if (this.skipBreakInterval) {
+      clearInterval(this.skipBreakInterval);
+      this.skipBreakInterval = null;
+    }
+    if (this.breakInterval) {
+      clearInterval(this.breakInterval);
+      this.breakInterval = null;
+    }
+    this.isOnBreak = false;
+    this.elements.breakModal.classList.remove("active");
+    this.elements.skipBreakBtn.textContent = "跳过休息";
+    this.lastBreakTime = new Date();
+    this.breakModalShown = false;
+    NotificationManager.breakNotified = false;
+  },
+
+  /**
+   * 开始休息
+   */
+  startBreak() {
+    if (this.breakModalTimeout) {
+      clearTimeout(this.breakModalTimeout);
+      this.breakModalTimeout = null;
+    }
+    
+    if (this.skipBreakInterval) {
+      clearInterval(this.skipBreakInterval);
+      this.skipBreakInterval = null;
+    }
+    
+    this.elements.skipBreakBtn.textContent = "跳过休息";
+    
+    this.isOnBreak = true;
+    this.lastBreakTime = new Date();
+    this.breakStartTime = new Date();
+    
+    if (this.breakInterval) {
+      clearInterval(this.breakInterval);
+    }
+    
+    this.breakInterval = setInterval(() => {
+      this.breakRemainingSeconds--;
+      
+      if (this.breakRemainingSeconds <= 0) {
+        this.endBreak();
+      } else {
+        this.elements.breakTimer.textContent = Utils.formatTime(this.breakRemainingSeconds);
+      }
+    }, 1000);
+  },
+
+  /**
+   * 结束休息
+   */
+  endBreak() {
+    clearInterval(this.breakInterval);
+    this.breakInterval = null;
+    this.isOnBreak = false;
+    this.breakModalShown = false;
+    this.elements.breakModal.classList.remove("active");
+    
+    NotificationManager.breakNotified = false;
+  },
+
+  /**
+   * 计时完成
+   */
   complete() {
     this.elements.timerDisplay.textContent = "00:00:00";
     this.elements.status.textContent = "下班啦！辛苦了！";
@@ -262,6 +490,7 @@ const Timer = {
     this.lunchStartTime = null;
     this.lunchEndTime = null;
     this.totalWorkSeconds = 0;
+    this.lastBreakTime = null;
     
     Config.clearTimerState();
     NotificationManager.reset();
@@ -274,6 +503,9 @@ const Timer = {
     }
   },
 
+  /**
+   * 保存计时状态
+   */
   saveState() {
     const state = {
       startTime: this.startTime.toISOString(),
@@ -285,53 +517,83 @@ const Timer = {
     Config.saveTimerState(state);
   },
 
+  /**
+   * 打开设置模态框
+   */
   openSettings() {
     this.elements.settingsModal.classList.add("active");
   },
 
+  /**
+   * 关闭设置模态框
+   */
   closeSettings() {
     this.elements.settingsModal.classList.remove("active");
     Config.applyConfigToUI(this.config);
   },
 
+  /**
+   * 保存设置
+   */
   saveSettings() {
     const newConfig = Config.getConfigFromUI();
     const startWorkTimeChanged = this.config.startWorkTime !== newConfig.startWorkTime;
+    const workHoursChanged = this.config.workHours !== newConfig.workHours;
+    const lunchBreakChanged = this.config.lunchBreak !== newConfig.lunchBreak;
+    const lunchTimeChanged = this.config.lunchTime !== newConfig.lunchTime;
     
     this.config = newConfig;
     Config.saveConfig(this.config);
     NotificationManager.config = this.config;
     this.closeSettings();
 
-    if (this.isRunning && startWorkTimeChanged) {
+    if (this.isRunning && (startWorkTimeChanged || workHoursChanged || lunchBreakChanged || lunchTimeChanged)) {
       const confirmRecalculate = confirm(
-        "上班时间已修改，是否重新计算倒计时？\n\n点击“确定”将根据新设置重新计算开始时间和结束时间"
+        "工作时间设置已修改，是否重新计算倒计时？\n\n点击\"确定\"将根据新设置重新计算开始时间和结束时间"
       );
       
       if (confirmRecalculate) {
         this.recalculateTimes();
       }
-    } else if (this.isRunning) {
-      alert("设置已保存，将在下次开始计时时生效");
     }
   },
 
+  /**
+   * 重新计算时间
+   */
   recalculateTimes() {
     this.calculateTimes();
     this.saveState();
     this.updateDisplay();
   },
 
+  /**
+   * 测试午休提醒
+   */
   testLunchNotification() {
     NotificationManager.reset();
     NotificationManager.notifyLunch();
   },
 
+  /**
+   * 测试下班提醒
+   */
   testOffWorkNotification() {
     NotificationManager.reset();
     NotificationManager.notifyOffWork();
   },
 
+  /**
+   * 测试休息提醒
+   */
+  testBreakNotification() {
+    NotificationManager.reset();
+    this.showBreakModal();
+  },
+
+  /**
+   * 检查通知权限
+   */
   async checkNotificationPermission() {
     const statusDiv = document.getElementById("permissionStatus");
     const permission = window.Notification?.permission || "不支持";
@@ -399,6 +661,9 @@ const Timer = {
     statusDiv.style.display = "block";
   },
 
+  /**
+   * 处理提示音类型变化
+   */
   handleSoundTypeChange(e) {
     const customSoundGroup = document.getElementById("customSoundGroup");
     if (e.target.value === "custom") {
@@ -408,6 +673,9 @@ const Timer = {
     }
   },
 
+  /**
+   * 处理自定义音频上传
+   */
   handleCustomSoundUpload(e) {
     const file = e.target.files[0];
     if (!file) return;

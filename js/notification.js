@@ -1,10 +1,19 @@
+/**
+ * 通知管理模块
+ * 负责所有提醒功能(桌面通知/声音/页面闪烁/震动/语音播报)
+ */
 const NotificationManager = {
   permission: "default",
   lunchNotified: false,
   offWorkNotified: false,
+  breakNotified: false,
   config: null,
   audioCache: {},
 
+  /**
+   * 初始化通知管理器
+   * @param {Object} config - 配置对象
+   */
   async init(config) {
     this.config = config;
     if ("Notification" in window) {
@@ -15,6 +24,12 @@ const NotificationManager = {
     }
   },
 
+  /**
+   * 显示通知
+   * @param {string} title - 通知标题
+   * @param {string} body - 通知内容
+   * @param {Object} options - 额外选项
+   */
   show(title, body, options = {}) {
     const method = this.config?.notifyMethod || "all";
 
@@ -33,27 +48,24 @@ const NotificationManager = {
     if (method === "vibrate") {
       this.vibrate();
     }
-
-    if (this.config?.enableVoice) {
-      this.speak(body);
-    }
-
-    if (
-      this.permission !== "granted" &&
-      (method === "all" || method === "notification")
-    ) {
-      console.log(`[提醒] ${title}: ${body}`);
-      alert(`${title}\n${body}`);
-    }
   },
 
+  /**
+   * 显示桌面通知
+   * @param {string} title - 通知标题
+   * @param {string} body - 通知内容
+   * @param {Object} options - 额外选项
+   */
   showDesktopNotification(title, body, options = {}) {
     if (this.permission === "granted") {
+      const isImportant = options.requireInteraction || false;
+      const autoCloseDelay = options.autoCloseDelay || 5000;
+      
       const notification = new window.Notification(title, {
         body: body,
         icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23667eea'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='white'>⏰</text></svg>",
         badge: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='40' fill='%23667eea'/></svg>",
-        requireInteraction: true,
+        requireInteraction: isImportant,
         silent: false,
         tag: `countdown-${Date.now()}`,
         timestamp: Date.now(),
@@ -68,11 +80,20 @@ const NotificationManager = {
       notification.onerror = (e) => {
         console.error("通知显示失败:", e);
       };
+      
+      if (!isImportant) {
+        setTimeout(() => {
+          notification.close();
+        }, autoCloseDelay);
+      }
     } else {
       console.log("通知权限未授予，当前状态:", this.permission);
     }
   },
 
+  /**
+   * 播放提示音
+   */
   playSound() {
     const soundType = this.config?.soundType || "beep";
 
@@ -84,6 +105,10 @@ const NotificationManager = {
     this.playBuiltInSound(soundType);
   },
 
+  /**
+   * 播放自定义音频
+   * @param {string} base64Data - Base64 编码的音频数据
+   */
   playCustomSound(base64Data) {
     try {
       const audio = new Audio(base64Data);
@@ -95,6 +120,10 @@ const NotificationManager = {
     }
   },
 
+  /**
+   * 播放内置提示音
+   * @param {string} type - 音频类型
+   */
   playBuiltInSound(type) {
     try {
       const audioContext = new (window.AudioContext ||
@@ -140,6 +169,11 @@ const NotificationManager = {
     }
   },
 
+  /**
+   * 获取声音配置
+   * @param {string} type - 音频类型
+   * @returns {Object} 声音配置
+   */
   getSoundConfig(type) {
     const configs = {
       beep: {
@@ -173,6 +207,9 @@ const NotificationManager = {
     return configs[type] || configs.beep;
   },
 
+  /**
+   * 页面闪烁提醒
+   */
   flashPage() {
     const card = document.querySelector(".card");
     if (card) {
@@ -194,12 +231,19 @@ const NotificationManager = {
     }, 500);
   },
 
+  /**
+   * 震动提醒(移动端)
+   */
   vibrate() {
     if ("vibrate" in navigator) {
       navigator.vibrate([200, 100, 200, 100, 200]);
     }
   },
 
+  /**
+   * 语音播报
+   * @param {string} text - 要播报的文本
+   */
   speak(text) {
     if ("speechSynthesis" in window) {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -211,13 +255,21 @@ const NotificationManager = {
     }
   },
 
+  /**
+   * 午休提醒
+   */
   notifyLunch() {
     if (!this.lunchNotified) {
-      this.show("午休时间到啦！", "该休息一下了，好好享受午休时光吧~");
+      this.show("午休时间到啦！", "该休息一下了，好好享受午休时光吧~", {
+        requireInteraction: true,
+      });
       this.lunchNotified = true;
     }
   },
 
+  /**
+   * 下班提醒
+   */
   notifyOffWork() {
     if (!this.offWorkNotified) {
       this.show("下班时间到！", "辛苦了一天，可以下班啦！", {
@@ -227,8 +279,24 @@ const NotificationManager = {
     }
   },
 
+  /**
+   * 定时休息提醒
+   */
+  notifyBreak() {
+    if (!this.breakNotified) {
+      this.show("该休息一下啦！", "已经工作一段时间了，起来走走、看看远方，放松一下眼睛和身体吧~", {
+        autoCloseDelay: 15000,
+      });
+      this.breakNotified = true;
+    }
+  },
+
+  /**
+   * 重置提醒状态
+   */
   reset() {
     this.lunchNotified = false;
     this.offWorkNotified = false;
+    this.breakNotified = false;
   },
 };

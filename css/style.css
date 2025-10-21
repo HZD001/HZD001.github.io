@@ -297,6 +297,20 @@ body {
   font-size: 16px;
 }
 
+.break-modal {
+  max-width: 480px;
+}
+
+.break-modal .modal-header {
+  justify-content: center;
+  border-bottom: none;
+  padding-bottom: 10px;
+}
+
+.break-modal .modal-header h2 {
+  text-align: center;
+}
+
 @media (max-width: 768px) {
   .card {
     padding: 30px 20px;
