@@ -20,6 +20,9 @@ const Timer = {
   breakModalShown: false,
   skipBreakCountdown: 15,
   skipBreakInterval: null,
+  isOvertime: false,
+  overtimeStartTime: null,
+  overtimeSeconds: 0,
 
   elements: {
     timerDisplay: null,
@@ -102,6 +105,13 @@ const Timer = {
     document
       .getElementById("checkPermissionBtn")
       .addEventListener("click", () => this.checkNotificationPermission());
+    document
+      .getElementById("setBeforeOffWorkBtn")
+      .addEventListener("click", () => this.setBeforeOffWork());
+    
+    document
+      .getElementById("enableDevMode")
+      .addEventListener("change", (e) => this.handleDevModeChange(e));
     
     document
       .getElementById("soundType")
@@ -133,7 +143,12 @@ const Timer = {
         Utils.formatTimeHHMM(this.endTime);
 
       const now = new Date();
-      if (now < this.endTime) {
+      
+      if (savedState.isOvertime && savedState.overtimeStartTime) {
+        this.isOvertime = true;
+        this.overtimeStartTime = new Date(savedState.overtimeStartTime);
+        this.startOvertime();
+      } else if (now < this.endTime) {
         this.start(true);
       } else {
         Config.clearTimerState();
@@ -148,7 +163,11 @@ const Timer = {
     if (this.isRunning) {
       this.pause();
     } else {
-      this.start();
+      if (this.elements.startBtn.textContent === "开始加班") {
+        this.startOvertime();
+      } else {
+        this.start();
+      }
     }
   },
 
@@ -175,7 +194,11 @@ const Timer = {
    */
   pause() {
     this.isRunning = false;
-    this.elements.startBtn.textContent = "继续";
+    if (this.isOvertime) {
+      this.elements.startBtn.textContent = "继续加班";
+    } else {
+      this.elements.startBtn.textContent = "继续";
+    }
     clearInterval(this.interval);
   },
 
@@ -212,6 +235,9 @@ const Timer = {
     this.lunchEndTime = null;
     this.totalWorkSeconds = 0;
     this.lastBreakTime = null;
+    this.isOvertime = false;
+    this.overtimeStartTime = null;
+    this.overtimeSeconds = 0;
 
     this.config.startWorkTime = "";
     Config.saveConfig(this.config);
@@ -279,8 +305,12 @@ const Timer = {
    */
   tick() {
     if (!this.isOnBreak) {
-      this.updateDisplay();
-      this.checkNotificationManagers();
+      if (this.isOvertime) {
+        this.updateOvertimeDisplay();
+      } else {
+        this.updateDisplay();
+        this.checkNotificationManagers();
+      }
     }
   },
 
@@ -495,12 +525,34 @@ const Timer = {
     Config.clearTimerState();
     NotificationManager.reset();
     
-    this.elements.startBtn.textContent = "开始上班";
+    this.elements.startBtn.textContent = "开始加班";
     this.elements.startBtn.disabled = false;
 
     if (this.config.enableOffWorkNotify) {
       NotificationManager.notifyOffWork();
     }
+  },
+
+  startOvertime() {
+    this.isOvertime = true;
+    this.overtimeStartTime = new Date();
+    this.overtimeSeconds = 0;
+    this.isRunning = true;
+    
+    this.elements.startBtn.textContent = "暂停";
+    this.elements.resetBtn.disabled = false;
+    this.elements.status.textContent = "加班中...";
+    
+    this.interval = setInterval(() => this.tick(), 1000);
+  },
+
+  updateOvertimeDisplay() {
+    const now = new Date();
+    this.overtimeSeconds = Math.floor((now - this.overtimeStartTime) / 1000);
+    
+    this.elements.timerDisplay.textContent = "+" + Utils.formatTime(this.overtimeSeconds);
+    this.elements.status.textContent = "加班中...";
+    this.elements.progressFill.style.width = "100%";
   },
 
   /**
@@ -513,6 +565,8 @@ const Timer = {
       lunchStartTime: this.lunchStartTime.toISOString(),
       lunchEndTime: this.lunchEndTime.toISOString(),
       totalWorkSeconds: this.totalWorkSeconds,
+      isOvertime: this.isOvertime,
+      overtimeStartTime: this.overtimeStartTime ? this.overtimeStartTime.toISOString() : null,
     };
     Config.saveTimerState(state);
   },
@@ -589,6 +643,30 @@ const Timer = {
   testBreakNotification() {
     NotificationManager.reset();
     this.showBreakModal();
+  },
+
+  /**
+   * 设置为下班前1分钟（测试用）
+   */
+  setBeforeOffWork() {
+    if (!this.isRunning) {
+      alert("请先开始上班计时");
+      return;
+    }
+
+    const now = new Date();
+    
+    // 将下班时间设置为1分钟后
+    this.endTime = new Date(now.getTime() + 60000);
+    
+    // 更新显示
+    this.elements.endTimeDisplay.textContent = Utils.formatTimeHHMM(this.endTime);
+    
+    // 保存状态
+    this.saveState();
+    this.updateDisplay();
+    
+    alert("已设置为下班前1分钟！\n下班时间：" + Utils.formatTimeHHMM(this.endTime));
   },
 
   /**
@@ -705,6 +783,15 @@ const Timer = {
       e.target.value = "";
     };
     reader.readAsDataURL(file);
+  },
+
+  handleDevModeChange(e) {
+    const devModeSection = document.getElementById("devModeSection");
+    if (e.target.checked) {
+      devModeSection.style.display = "block";
+    } else {
+      devModeSection.style.display = "none";
+    }
   },
 };
 

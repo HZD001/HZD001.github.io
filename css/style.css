@@ -292,9 +292,9 @@ body {
 }
 
 .modal-footer .btn {
-  flex: 0;
-  padding: 12px 30px;
+  padding: 12px 40px;
   font-size: 16px;
+  border-radius: 6px;
 }
 
 .break-modal {

@@ -168,9 +168,16 @@
             </div>
           </div>
 
-          <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+          <div class="form-group checkbox-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+            <label>
+              <input type="checkbox" id="enableDevMode" />
+              <span>启用开发者模式</span>
+            </label>
+          </div>
+
+          <div class="form-group" id="devModeSection" style="display: none;">
             <label style="margin-bottom: 15px;">测试提醒功能</label>
-            <div style="display: flex; gap: 10px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
               <button class="btn btn-secondary" id="testLunchBtn" type="button" style="flex: 1; padding: 10px;">
                 测试午休提醒
               </button>
@@ -178,9 +185,12 @@
                 测试下班提醒
               </button>
             </div>
-            <div style="margin-top: 10px;">
-              <button class="btn btn-secondary" id="testBreakBtn" type="button" style="width: 100%; padding: 10px;">
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-secondary" id="testBreakBtn" type="button" style="flex: 1; padding: 10px;">
                 测试休息提醒
+              </button>
+              <button class="btn btn-secondary" id="setBeforeOffWorkBtn" type="button" style="flex: 1; padding: 10px;">
+                下班前1分钟
               </button>
             </div>
             <div style="margin-top: 15px;">

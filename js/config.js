@@ -19,6 +19,7 @@ const Config = {
     enableBreakReminder: false,
     breakInterval: 60,
     breakDuration: 5,
+    enableDevMode: false,
   },
 
   /**
@@ -96,6 +97,8 @@ const Config = {
       config.enableBreakReminder || false;
     document.getElementById("breakInterval").value = config.breakInterval || 60;
     document.getElementById("breakDuration").value = config.breakDuration || 5;
+    document.getElementById("enableDevMode").checked =
+      config.enableDevMode || false;
     
     const customSoundGroup = document.getElementById("customSoundGroup");
     const customSoundPreview = document.getElementById("customSoundPreview");
@@ -106,6 +109,13 @@ const Config = {
       }
     } else {
       customSoundGroup.style.display = "none";
+    }
+    
+    const devModeSection = document.getElementById("devModeSection");
+    if (config.enableDevMode) {
+      devModeSection.style.display = "block";
+    } else {
+      devModeSection.style.display = "none";
     }
   },
 
@@ -128,6 +138,7 @@ const Config = {
       enableBreakReminder: document.getElementById("enableBreakReminder").checked,
       breakInterval: parseInt(document.getElementById("breakInterval").value),
       breakDuration: parseInt(document.getElementById("breakDuration").value),
+      enableDevMode: document.getElementById("enableDevMode").checked,
     };
   },
 
