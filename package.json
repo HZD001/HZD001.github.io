@@ -1,0 +1,12 @@
+{
+  "name": "countdown-timer",
+  "version": "1.0.0",
+  "description": "下班倒计时工具",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "python3 -m http.server 8000"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "MIT"
+}
