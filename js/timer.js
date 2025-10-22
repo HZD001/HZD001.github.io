@@ -269,6 +269,15 @@ const Timer = {
         parsedTime.hours,
         parsedTime.minutes
       );
+      
+      const offsetTime = Utils.parseTimeString(this.config.clockOffsetTime || "00:00");
+      const offsetMinutes = offsetTime.hours * 60 + offsetTime.minutes;
+      
+      if (this.config.clockOffsetType === "slow") {
+        this.startTime = new Date(this.startTime.getTime() + offsetMinutes * 60000);
+      } else {
+        this.startTime = new Date(this.startTime.getTime() - offsetMinutes * 60000);
+      }
     } else {
       this.startTime = new Date(now);
     }
@@ -595,20 +604,19 @@ const Timer = {
     const workHoursChanged = this.config.workHours !== newConfig.workHours;
     const lunchBreakChanged = this.config.lunchBreak !== newConfig.lunchBreak;
     const lunchTimeChanged = this.config.lunchTime !== newConfig.lunchTime;
+    const clockOffsetChanged = 
+      this.config.clockOffsetType !== newConfig.clockOffsetType ||
+      this.config.clockOffsetTime !== newConfig.clockOffsetTime;
     
     this.config = newConfig;
     Config.saveConfig(this.config);
     NotificationManager.config = this.config;
     this.closeSettings();
 
-    if (this.isRunning && (startWorkTimeChanged || workHoursChanged || lunchBreakChanged || lunchTimeChanged)) {
-      const confirmRecalculate = confirm(
-        "工作时间设置已修改，是否重新计算倒计时？\n\n点击\"确定\"将根据新设置重新计算开始时间和结束时间"
-      );
-      
-      if (confirmRecalculate) {
-        this.recalculateTimes();
-      }
+    if (this.isRunning && (startWorkTimeChanged || workHoursChanged || lunchBreakChanged || lunchTimeChanged || clockOffsetChanged)) {
+      this.recalculateTimes();
+    } else if (!this.isRunning && this.config.startWorkTime && this.config.startWorkTime.trim() !== "") {
+      this.start();
     }
   },
 

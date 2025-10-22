@@ -51,10 +51,29 @@
 
         <div class="modal-body">
           <div class="form-group">
-            <label for="startWorkTime">今日上班时间</label>
+            <label for="startWorkTime">今日上班时间（打卡机打卡时间）</label>
             <input type="time" id="startWorkTime" value="" />
             <div style="margin-top: 8px; color: #666; font-size: 14px;">
               留空则使用点击"开始上班"时的实际时间
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="clockOffset">打卡偏移量</label>
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <select id="clockOffsetType" style="flex: 0 0 80px;">
+                <option value="fast">快</option>
+                <option value="slow">慢</option>
+              </select>
+              <input
+                type="time"
+                id="clockOffsetTime"
+                value="00:00"
+                style="flex: 1;"
+              />
+            </div>
+            <div style="margin-top: 8px; color: #666; font-size: 14px;">
+              如果打卡机时间与实际时间有偏差（慢：打卡机时间慢于实际，需加上偏移量）
             </div>
           </div>
 

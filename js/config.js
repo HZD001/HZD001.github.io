@@ -8,8 +8,10 @@ const Config = {
 
   defaultConfig: {
     startWorkTime: "",
+    clockOffsetType: "fast",
+    clockOffsetTime: "00:00",
     workHours: 8,
-    lunchBreak: 60,
+    lunchBreak: 90,
     lunchTime: "12:00",
     enableLunchNotify: true,
     enableOffWorkNotify: true,
@@ -83,6 +85,8 @@ const Config = {
    */
   applyConfigToUI(config) {
     document.getElementById("startWorkTime").value = config.startWorkTime;
+    document.getElementById("clockOffsetType").value = config.clockOffsetType || "fast";
+    document.getElementById("clockOffsetTime").value = config.clockOffsetTime || "00:00";
     document.getElementById("workHours").value = config.workHours;
     document.getElementById("lunchBreak").value = config.lunchBreak;
     document.getElementById("lunchTime").value = config.lunchTime;
@@ -126,6 +130,8 @@ const Config = {
   getConfigFromUI() {
     return {
       startWorkTime: document.getElementById("startWorkTime").value,
+      clockOffsetType: document.getElementById("clockOffsetType").value,
+      clockOffsetTime: document.getElementById("clockOffsetTime").value,
       workHours: parseFloat(document.getElementById("workHours").value),
       lunchBreak: parseInt(document.getElementById("lunchBreak").value),
       lunchTime: document.getElementById("lunchTime").value,
