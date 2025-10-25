@@ -188,6 +188,32 @@
             </div>
           </div>
 
+          <div class="form-group checkbox-group">
+            <label>
+              <input type="checkbox" id="enableCustomReminders" />
+              <span>启用定时提醒功能</span>
+            </label>
+            <div style="margin-top: 8px; color: #666; font-size: 14px;">
+              在指定时间提醒重要事项（如会议、喝水、活动等）
+            </div>
+          </div>
+
+          <div class="form-group" id="customRemindersSection" style="display: none;">
+            <label style="margin-bottom: 15px; display: block;">自定义提醒</label>
+            
+            <div id="customRemindersList" style="margin-bottom: 15px;">
+              <!-- 提醒项目将动态��加到这里 -->
+            </div>
+            
+            <button type="button" class="btn btn-secondary" id="addReminderBtn" style="width: 100%; padding: 10px; border: 2px dashed #ddd; background: #f9f9f9; color: #666;">
+              + 添加新提醒
+            </button>
+            
+            <div style="margin-top: 10px; padding: 10px; background: #f0f7ff; border-radius: 8px; font-size: 14px; color: #0066cc;">
+              💡 提示：可以添加多个定时提醒，支持重复提醒和自定义内容
+            </div>
+          </div>
+
           <div class="form-group checkbox-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
             <label>
               <input type="checkbox" id="enableDevMode" />
@@ -211,6 +237,14 @@
               </button>
               <button class="btn btn-secondary" id="setBeforeOffWorkBtn" type="button" style="flex: 1; padding: 10px;">
                 下班前1分钟
+              </button>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+              <button class="btn btn-secondary" id="testCustomReminderBtn" type="button" style="flex: 1; padding: 10px;">
+                测试自定义提醒
+              </button>
+              <button class="btn btn-secondary" id="clearCustomRemindersBtn" type="button" style="flex: 1; padding: 10px;">
+                清除提醒状态
               </button>
             </div>
             <div style="margin-top: 15px;">
@@ -261,6 +295,7 @@
     <script src="js/utils.js"></script>
     <script src="js/config.js"></script>
     <script src="js/notification.js"></script>
+    <script src="js/customReminderUI.js"></script>
     <script src="js/timer.js"></script>
   </body>
 </html>

@@ -22,6 +22,8 @@ const Config = {
     breakInterval: 60,
     breakDuration: 5,
     enableDevMode: false,
+    enableCustomReminders: false,
+    customReminders: [],
   },
 
   /**
@@ -32,7 +34,18 @@ const Config = {
     const saved = localStorage.getItem(this.STORAGE_KEY);
     if (saved) {
       try {
-        return { ...this.defaultConfig, ...JSON.parse(saved) };
+        const savedConfig = JSON.parse(saved);
+        const config = { ...this.defaultConfig, ...savedConfig };
+        
+        // 如果保存的配置中有customReminders且不为空，使用保存的配置
+        // 否则使用默认配置
+        if (savedConfig.customReminders && Array.isArray(savedConfig.customReminders) && savedConfig.customReminders.length > 0) {
+          config.customReminders = savedConfig.customReminders;
+        } else {
+          config.customReminders = [...this.defaultConfig.customReminders];
+        }
+        
+        return config;
       } catch (e) {
         return { ...this.defaultConfig };
       }
@@ -121,6 +134,22 @@ const Config = {
     } else {
       devModeSection.style.display = "none";
     }
+
+    // 应用自定义提醒设置
+    const enableCustomReminders = document.getElementById("enableCustomReminders");
+    if (enableCustomReminders) {
+      enableCustomReminders.checked = config.enableCustomReminders || false;
+      
+      const customRemindersSection = document.getElementById("customRemindersSection");
+      if (customRemindersSection) {
+        customRemindersSection.style.display = config.enableCustomReminders ? "block" : "none";
+      }
+    }
+
+    // 加载自定义提醒列表
+    if (typeof CustomReminderUI !== 'undefined') {
+      CustomReminderUI.loadReminders();
+    }
   },
 
   /**
@@ -145,7 +174,122 @@ const Config = {
       breakInterval: parseInt(document.getElementById("breakInterval").value),
       breakDuration: parseInt(document.getElementById("breakDuration").value),
       enableDevMode: document.getElementById("enableDevMode").checked,
+      enableCustomReminders: document.getElementById("enableCustomReminders")?.checked || false,
+      customReminders: this.getCustomRemindersFromUI(),
     };
+  },
+
+  /**
+   * 从UI获取自定义提醒列表
+   * @returns {Array} 自定义提醒数组
+   */
+  getCustomRemindersFromUI() {
+    const reminders = [];
+    const reminderElements = document.querySelectorAll('.custom-reminder-item');
+    
+    reminderElements.forEach(element => {
+      const id = element.dataset.reminderId;
+      const time = element.querySelector('.reminder-time').value;
+      const title = element.querySelector('.reminder-title').value;
+      const content = element.querySelector('.reminder-content').value;
+      const enabled = element.querySelector('.reminder-enabled').checked;
+      const repeat = element.querySelector('.reminder-repeat').checked;
+      
+      if (time && title) {
+        reminders.push({
+          id: id || 'reminder_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          time,
+          title,
+          content,
+          enabled,
+          repeat,
+          notifiedDates: []
+        });
+      }
+    });
+    
+    return reminders;
+  },
+
+  /**
+   * 添加自定义提醒
+   * @param {Object} reminder - 提醒对象
+   */
+  addCustomReminder(reminder) {
+    const config = this.loadConfig();
+    config.customReminders.push(reminder);
+    this.saveConfig(config);
+  },
+
+  /**
+   * 删除自定义提醒
+   * @param {string} reminderId - 提醒ID
+   */
+  removeCustomReminder(reminderId) {
+    const config = this.loadConfig();
+    config.customReminders = config.customReminders.filter(r => r.id !== reminderId);
+    this.saveConfig(config);
+  },
+
+  /**
+   * 更新自定义提醒
+   * @param {string} reminderId - 提醒ID
+   * @param {Object} updatedReminder - 更新的提醒对象
+   */
+  updateCustomReminder(reminderId, updatedReminder) {
+    const config = this.loadConfig();
+    const index = config.customReminders.findIndex(r => r.id === reminderId);
+    if (index !== -1) {
+      config.customReminders[index] = { ...config.customReminders[index], ...updatedReminder };
+      this.saveConfig(config);
+    }
+  },
+
+  /**
+   * 清除提醒通知状态
+   * @param {string} reminderId - 提醒ID
+   * @param {string} date - 日期字符串 (YYYY-MM-DD)
+   */
+  clearReminderNotification(reminderId, date) {
+    const config = this.loadConfig();
+    const reminder = config.customReminders.find(r => r.id === reminderId);
+    if (reminder) {
+      reminder.notifiedDates = reminder.notifiedDates || [];
+      const index = reminder.notifiedDates.indexOf(date);
+      if (index > -1) {
+        reminder.notifiedDates.splice(index, 1);
+      }
+      this.saveConfig(config);
+    }
+  },
+
+  /**
+   * 标记提醒已通知
+   * @param {string} reminderId - 提醒ID
+   * @param {string} date - 日期字符串 (YYYY-MM-DD)
+   */
+  markReminderNotified(reminderId, date) {
+    const config = this.loadConfig();
+    const reminder = config.customReminders.find(r => r.id === reminderId);
+    if (reminder) {
+      reminder.notifiedDates = reminder.notifiedDates || [];
+      if (!reminder.notifiedDates.includes(date)) {
+        reminder.notifiedDates.push(date);
+      }
+      this.saveConfig(config);
+    }
+  },
+
+  /**
+   * 检查提醒是否已通知
+   * @param {string} reminderId - 提醒ID
+   * @param {string} date - 日期字符串 (YYYY-MM-DD)
+   * @returns {boolean} 是否已通知
+   */
+  isReminderNotified(reminderId, date) {
+    const config = this.loadConfig();
+    const reminder = config.customReminders.find(r => r.id === reminderId);
+    return reminder && reminder.notifiedDates && reminder.notifiedDates.includes(date);
   },
 
   /**

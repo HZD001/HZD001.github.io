@@ -53,6 +53,11 @@ const Timer = {
     this.loadSavedState();
     Config.applyConfigToUI(this.config);
     NotificationManager.init(this.config);
+    
+    // 初始化自定义提醒UI
+    if (typeof CustomReminderUI !== 'undefined') {
+      CustomReminderUI.init();
+    }
   },
 
   /**
@@ -165,7 +170,11 @@ const Timer = {
     } else {
       if (this.elements.startBtn.textContent === "开始加班") {
         this.startOvertime();
+      } else if (this.elements.startBtn.textContent === "继续" || this.elements.startBtn.textContent === "继续加班") {
+        // 从暂停状态恢复，不重新计算时间
+        this.start(true);
       } else {
+        // 首次启动，需要计算时间
         this.start();
       }
     }
@@ -380,6 +389,11 @@ const Timer = {
 
     if (this.config.enableBreakReminder && this.isRunning) {
       this.checkBreakReminder(now);
+    }
+
+    // 检查自定义提醒
+    if (this.config.enableCustomReminders && this.isRunning) {
+      NotificationManager.checkCustomReminders(this.config.customReminders);
     }
   },
 

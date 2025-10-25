@@ -7,6 +7,7 @@ const NotificationManager = {
   lunchNotified: false,
   offWorkNotified: false,
   breakNotified: false,
+  customReminderNotified: {}, // 存储自定义提醒通知状态 { reminderId: { date: boolean } }
   config: null,
   audioCache: {},
 
@@ -58,36 +59,41 @@ const NotificationManager = {
    */
   showDesktopNotification(title, body, options = {}) {
     if (this.permission === "granted") {
-      const isImportant = options.requireInteraction || false;
-      const autoCloseDelay = options.autoCloseDelay || 5000;
-      
-      const notification = new window.Notification(title, {
-        body: body,
-        icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23667eea'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='white'%3E⏰%3C/text%3E%3C/svg%3E",
-        badge: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23667eea'/%3E%3C/svg%3E",
-        requireInteraction: isImportant,
-        silent: false,
-        tag: `countdown-${Date.now()}`,
-        timestamp: Date.now(),
-        ...options,
-      });
-
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-      };
-
-      notification.onerror = (e) => {
-        console.error("通知显示失败:", e);
-      };
-      
-      if (!isImportant) {
-        setTimeout(() => {
-          notification.close();
-        }, autoCloseDelay);
+      if (window.location.protocol === "file:") {
+        return;
       }
-    } else {
-      console.log("通知权限未授予，当前状态:", this.permission);
+      
+      const autoCloseDelay = options.autoCloseDelay || 5000;
+      const requireInteraction = options.requireInteraction || false;
+      
+      try {
+        const notification = new window.Notification(title, {
+          body: body,
+          icon: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23667eea'/%3E%3Ctext x='50' y='65' font-size='50' text-anchor='middle' fill='white'%3E⏰%3C/text%3E%3C/svg%3E",
+          badge: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='40' fill='%23667eea'/%3E%3C/svg%3E",
+          requireInteraction: requireInteraction,
+          silent: false,
+          tag: `countdown-${Date.now()}`,
+          timestamp: Date.now(),
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        notification.onerror = () => {
+          // 静默处理错误，避免控制台报错
+        };
+        
+        if (!requireInteraction) {
+          setTimeout(() => {
+            notification.close();
+          }, autoCloseDelay);
+        }
+      } catch (e) {
+        // 静默处理通知创建失败的情况
+      }
     }
   },
 
@@ -292,11 +298,64 @@ const NotificationManager = {
   },
 
   /**
+   * 自定义提醒
+   * @param {Object} reminder - 提醒对象
+   */
+  notifyCustomReminder(reminder) {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const reminderKey = `${reminder.id}_${today}`;
+    
+    if (!this.customReminderNotified[reminderKey]) {
+      this.show(reminder.title, reminder.content || "定时提醒~", {
+        autoCloseDelay: 10000,
+      });
+      
+      // 标记今日已通知
+      this.customReminderNotified[reminderKey] = true;
+      
+      // 更新配置中的通知状态
+      Config.markReminderNotified(reminder.id, today);
+    }
+  },
+
+  /**
+   * 检查是否需要通知自定义提醒
+   * @param {Array} reminders - 提醒列表
+   */
+  checkCustomReminders(reminders) {
+    if (!reminders || !Array.isArray(reminders)) return;
+    
+    const now = new Date();
+    const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const today = now.toISOString().split('T')[0];
+    
+    reminders.forEach(reminder => {
+      if (!reminder.enabled) return;
+      
+      // 检查是否到了提醒时间
+      if (reminder.time === currentTime) {
+        // 检查今天是否已经通知过
+        if (!Config.isReminderNotified(reminder.id, today)) {
+          this.notifyCustomReminder(reminder);
+        }
+      }
+    });
+  },
+
+  /**
    * 重置提醒状态
    */
   reset() {
     this.lunchNotified = false;
     this.offWorkNotified = false;
     this.breakNotified = false;
+    this.customReminderNotified = {};
+  },
+
+  /**
+   * 重置自定义提醒状态（用于新的一天）
+   */
+  resetCustomReminders() {
+    this.customReminderNotified = {};
   },
 };

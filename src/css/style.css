@@ -311,6 +311,134 @@ body {
   text-align: center;
 }
 
+/* 自定义提醒样式 */
+.custom-reminder-item {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 10px;
+  position: relative;
+}
+
+.custom-reminder-item.removing {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+@keyframes slideOut {
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.custom-reminder-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.custom-reminder-title {
+  font-weight: 600;
+  color: #495057;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-reminder-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.custom-reminder-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.custom-reminder-btn:hover {
+  background: #e9ecef;
+}
+
+.custom-reminder-btn.delete {
+  color: #dc3545;
+}
+
+.custom-reminder-btn.delete:hover {
+  background: #f8d7da;
+}
+
+.custom-reminder-fields {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.custom-reminder-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.custom-reminder-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.custom-reminder-field label {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.custom-reminder-field input[type="time"],
+.custom-reminder-field input[type="text"],
+.custom-reminder-field textarea {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+}
+
+.custom-reminder-field textarea {
+  resize: vertical;
+  min-height: 40px;
+  max-height: 80px;
+}
+
+.custom-reminder-field input:focus,
+.custom-reminder-field textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.custom-reminder-checkboxes {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.custom-reminder-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.custom-reminder-checkboxes input[type="checkbox"] {
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .card {
     padding: 30px 20px;
@@ -322,5 +450,16 @@ body {
 
   .controls {
     flex-direction: column;
+  }
+
+  .custom-reminder-fields {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .custom-reminder-checkboxes {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
   }
 }
